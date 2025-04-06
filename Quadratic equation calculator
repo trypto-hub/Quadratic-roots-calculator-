@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Advanced Quadratic Solver</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.4/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f0f0f0;
+      text-align: center;
+    }
+    input, select {
+      margin: 0.5rem;
+      padding: 0.5rem;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      background-color: #333;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #result, canvas {
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Quadratic Equation Solver</h1>
+
+  <p>Enter the coefficients for <strong>ax² + bx + c = 0</strong> or upload an image of the equation:</p>
+
+  <input type="number" id="a" placeholder="a" />
+  <input type="number" id="b" placeholder="b" />
+  <input type="number" id="c" placeholder="c" />
+  <br>
+
+  <label>Choose method:</label>
+  <select id="method">
+    <option value="formula">Quadratic Formula</option>
+    <option value="factor">Factorization</option>
+    <option value="graph">Graph</option>
+  </select>
+  <br><br>
+
+  <input type="file" id="imageInput" accept="image/*" />
+  <button onclick="extractFromImage()">Extract from Image</button>
+  <br><br>
+
+  <button onclick="solve()">Solve</button>
+
+  <div id="result"></div>
+  <canvas id="graphCanvas" width="400" height="300"></canvas>
+
+  <script>
+    function extractFromImage() {
+      const image = document.getElementById('imageInput').files[0];
+      if (!image) return alert('Please upload an image.');
+
+      Tesseract.recognize(image, 'eng').then(({ data: { text } }) => {
+        const match = text.match(/(-?\d*)x\^2\s*([+-]?\s*\d*)x\s*([+-]?\s*\d+)/i);
+        if (match) {
+          document.getElementById('a').value = match[1] || 1;
+          document.getElementById('b').value = match[2].replace(/\s/g, '') || 0;
+          document.getElementById('c').value = match[3].replace(/\s/g, '') || 0;
+        } else {
+          document.getElementById('result').innerHTML = 'Could not recognize a quadratic equation.';
+        }
+      });
+    }
+
+    function solve() {
+      const a = parseFloat(document.getElementById("a").value);
+      const b = parseFloat(document.getElementById("b").value);
+      const c = parseFloat(document.getElementById("c").value);
+      const method = document.getElementById("method").value;
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "";
+
+      if (isNaN(a) || isNaN(b) || isNaN(c) || a === 0) {
+        resultDiv.innerHTML = "Please enter valid numbers (a ≠ 0)";
+        return;
+      }
+
+      const discriminant = b*b - 4*a*c;
+
+      if (method === "formula") {
+        if (discriminant > 0) {
+          const root1 = (-b + Math.sqrt(discriminant)) / (2 * a);
+          const root2 = (-b - Math.sqrt(discriminant)) / (2 * a);
+          resultDiv.innerHTML = `Two real roots: x = ${root1.toFixed(2)}, x = ${root2.toFixed(2)}`;
+        } else if (discriminant === 0) {
+          const root = -b / (2 * a);
+          resultDiv.innerHTML = `One real root: x = ${root.toFixed(2)}`;
+        } else {
+          const real = (-b / (2 * a)).toFixed(2);
+          const imag = (Math.sqrt(-discriminant) / (2 * a)).toFixed(2);
+          resultDiv.innerHTML = `Complex roots: x = ${real} ± ${imag}i`;
+        }
+      }
+
+      else if (method === "factor") {
+        let found = false;
+        for (let i = -100; i <= 100; i++) {
+          for (let j = -100; j <= 100; j++) {
+            if (i + j === -b / a && i * j === c / a) {
+              resultDiv.innerHTML = `Factorized roots: x = ${-i}, x = ${-j}`;
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+        if (!found) {
+          resultDiv.innerHTML = "Can't be solved by factorization. Try the quadratic formula.";
+        }
+      }
+
+      else if (method === "graph") {
+        const ctx = document.getElementById('graphCanvas').getContext('2d');
+        const data = [];
+        for (let x = -10; x <= 10; x += 0.2) {
+          data.push({ x: x, y: a*x*x + b*x + c });
+        }
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [{
+              label: 'y = ax² + bx + c',
+              data: data,
+              borderColor: 'blue',
+              fill: false
+            }]
+          },
+          options: {
+            scales: {
+              x: { type: 'linear', position: 'bottom' },
+              y: { beginAtZero: false }
+            }
+          }
+        });
+        resultDiv.innerHTML = 'Graph plotted below.';
+      }
+    }
+  </script>
+
+</body>
+</html>
